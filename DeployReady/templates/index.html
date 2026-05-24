@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>SecureVault AES — Secure Image Transmission</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #203e2d;
+  --s1: #080d18;
+  --s2: #0c1220;
+  --s3: #111929;
+  --border: #1a2540;
+  --border2: #243355;
+  --cyan: #00ffe0;
+  --cyan2: #00ccb3;
+  --gold: #ffc947;
+  --gold2: #e6a800;
+  --red: #ff4d6d;
+  --green: #39d98a;
+  --blue: #4f8ef7;
+  --purple: #9b6dff;
+  --text: #cdd6f4;
+  --muted: #e2e6ed;
+  --dim: #2a3a55;
+  --r: 10px;
+  --r2: 16px;
+  --r3: 22px;
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box }
+html { scroll-behavior:smooth }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── ANIMATED BG ── */
+.bg-layer {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden;
+}
+.bg-grid {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(0,255,224,.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,255,224,.018) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+.bg-orb {
+  position: absolute; border-radius: 50%; filter: blur(80px); opacity: .55;
+  animation: drift 20s ease-in-out infinite alternate;
+}
+.orb1 { width:500px; height:500px; top:-100px; left:-100px; background: radial-gradient(circle, rgba(0,255,224,.12), transparent 70%); }
+.orb2 { width:600px; height:600px; top:40%; right:-150px; background: radial-gradient(circle, rgba(155,109,255,.1), transparent 70%); animation-delay:-10s; animation-direction:alternate-reverse; }
+.orb3 { width:400px; height:400px; bottom:-100px; left:30%; background: radial-gradient(circle, rgba(255,201,71,.07), transparent 70%); animation-delay:-5s; }
+@keyframes drift { 0%{transform:translate(0,0) scale(1)} 100%{transform:translate(30px,40px) scale(1.08)} }
+
+/* ── SCANLINE ── */
+body::after {
+  content: '';
+  position: fixed; inset: 0; pointer-events: none; z-index: 1000;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,.04) 2px, rgba(0,0,0,.04) 4px);
+}
+
+/* ── LAYOUT ── */
+.wrap { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 0 24px; }
+
+/* ── HEADER ── */
+header {
+  padding: 32px 0 24px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 52px;
+}
+.hdr-inner { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+
+.logo { display: flex; align-items: center; gap: 18px; }
+.logo-icon {
+  width: 52px; height: 52px;
+  background: linear-gradient(135deg, rgba(0,255,224,.15), rgba(155,109,255,.1));
+  border: 1.5px solid var(--cyan);
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+  position: relative; overflow: hidden;
+  animation: iconGlow 3s ease-in-out infinite;
+}
+.logo-icon::before {
+  content: '';
+  position: absolute; inset: -50%;
+  background: conic-gradient(from 0deg, transparent, rgba(0,255,224,.15), transparent 60%);
+  animation: spin 6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes iconGlow {
+  0%,100% { box-shadow: 0 0 20px rgba(0,255,224,.2), inset 0 0 20px rgba(0,255,224,.05); }
+  50%      { box-shadow: 0 0 40px rgba(0,255,224,.4), inset 0 0 30px rgba(0,255,224,.1); }
+}
+.logo-icon span { position: relative; z-index: 1; }
+.logo-info h1 {
+  font-family: 'Syne', sans-serif;
+  font-size: 22px; font-weight: 800;
+  color: #fff; letter-spacing: -.5px;
+}
+.logo-info h1 em { color: var(--cyan); font-style: normal; }
+.logo-info p {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px; color: var(--muted);
+  letter-spacing: 3px; text-transform: uppercase; margin-top: 3px;
+}
+
+.hdr-badges { display: flex; gap: 8px; flex-wrap: wrap; }
+.badge {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px; font-weight: 700;
+  padding: 5px 12px; border-radius: 20px;
+  text-transform: uppercase; letter-spacing: 1.5px;
+}
+.bc { background: rgba(0,255,224,.08); color: var(--cyan); border: 1px solid rgba(0,255,224,.25); }
+.bg_ { background: rgba(155,109,255,.08); color: var(--purple); border: 1px solid rgba(155,109,255,.25); }
+.ba { background: rgba(255,201,71,.08); color: var(--gold); border: 1px solid rgba(255,201,71,.25); }
+.br { background: rgba(255,77,109,.08); color: var(--red); border: 1px solid rgba(255,77,109,.25); }
+
+/* ── SECURITY NOTICE ── */
+.security-notice {
+  background: linear-gradient(135deg, rgba(0,255,224,.06), rgba(155,109,255,.04));
+  border: 1px solid rgba(0,255,224,.2);
+  border-radius: var(--r2);
+  padding: 20px 24px;
+  margin-bottom: 48px;
+  display: flex; align-items: flex-start; gap: 16px;
+}
+.sn-icon { font-size: 28px; flex-shrink: 0; margin-top: 2px; }
+.sn-text h3 { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: var(--cyan); margin-bottom: 6px; }
+.sn-text p { font-size: 12.5px; color: var(--muted); line-height: 1.7; }
+.sn-text p strong { color: var(--gold); }
+
+/* ── HOW IT WORKS ── */
+.section-label {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 20px;
+}
+.section-label .sl-num {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px; color: var(--cyan);
+  background: rgba(0,255,224,.07);
+  border: 1px solid rgba(0,255,224,.2);
+  padding: 3px 10px; border-radius: 4px;
+}
+.section-label h2 { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; color: #fff; }
+
+.steps { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 56px; }
+.step {
+  background: var(--s2); border: 1px solid var(--border);
+  border-radius: var(--r2); padding: 24px 20px;
+  position: relative; overflow: hidden;
+  transition: transform .3s, border-color .3s;
+}
+.step:hover { transform: translateY(-5px); border-color: var(--border2); }
+.step::after {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+}
+.step:nth-child(1)::after { background: linear-gradient(90deg, var(--gold), #fb8c00); }
+.step:nth-child(2)::after { background: linear-gradient(90deg, var(--purple), var(--blue)); }
+.step:nth-child(3)::after { background: linear-gradient(90deg, var(--cyan), var(--green)); }
+.step:nth-child(4)::after { background: linear-gradient(90deg, var(--red), var(--gold)); }
+.step-num {
+  font-family: 'Syne', sans-serif; font-size: 44px; font-weight: 800;
+  color: rgba(255,255,255,.04); line-height: 1; margin-bottom: 12px;
+}
+.step-icon { font-size: 24px; margin-bottom: 10px; }
+.step h3 { font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+.step p { font-size: 11px; color: var(--muted); line-height: 1.7; }
+
+/* ── MAIN GRID ── */
+.main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-bottom: 52px; }
+
+/* ── PANEL ── */
+.panel {
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: var(--r3);
+  padding: 30px;
+  position: relative; overflow: hidden;
+}
+.panel::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+}
+.panel-enc::before { background: linear-gradient(90deg, var(--purple), var(--blue)); }
+.panel-dec::before { background: linear-gradient(90deg, var(--cyan), var(--green)); }
+
+.panel-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 18px; font-weight: 800; color: #fff; margin-bottom: 4px;
+}
+.panel-sub { font-size: 12px; color: var(--muted); margin-bottom: 24px; line-height: 1.6; }
+
+/* ── TABS ── */
+.tabs { display: flex; gap: 0; background: var(--s1); border-radius: 10px; padding: 4px; margin-bottom: 22px; }
+.tab-btn {
+  flex: 1; padding: 9px 12px;
+  background: transparent; border: none; cursor: pointer;
+  font-family: 'Space Mono', monospace; font-size: 10px; font-weight: 700;
+  color: var(--muted); border-radius: 7px;
+  transition: all .25s; letter-spacing: .5px;
+}
+.tab-btn.active {
+  background: var(--s3); color: var(--cyan);
+  box-shadow: 0 0 16px rgba(0,255,224,.1);
+}
+.tab-content { display: none; }
+.tab-content.active { display: block; animation: fadeIn .3s ease; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+
+/* ── DROP ZONE ── */
+.dropzone {
+  border: 1.5px dashed var(--border2);
+  border-radius: var(--r2); padding: 36px 20px;
+  text-align: center; cursor: pointer;
+  transition: all .3s; position: relative; margin-bottom: 20px;
+  background: var(--s1);
+}
+.dropzone:hover, .dropzone.drag {
+  border-color: var(--cyan);
+  background: rgba(0,255,224,.03);
+  box-shadow: 0 0 30px rgba(0,255,224,.06);
+}
+.dropzone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.dz-icon { font-size: 36px; margin-bottom: 10px; }
+.dz-title { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 5px; }
+.dz-sub { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); }
+.dz-preview {
+  width: 100%; max-height: 160px; object-fit: contain;
+  border-radius: var(--r); margin-top: 14px; display: none;
+}
+
+/* ── FORM ELEMENTS ── */
+.form-group { margin-bottom: 16px; }
+.form-group label {
+  display: block; font-family: 'Space Mono', monospace;
+  font-size: 9px; color: var(--muted); letter-spacing: 2px;
+  text-transform: uppercase; margin-bottom: 8px;
+}
+.pw-wrap { position: relative; }
+.pw-wrap input, .form-input {
+  width: 100%; background: var(--s1); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 13px 48px 13px 16px;
+  font-family: 'Space Mono', monospace; font-size: 13px; color: #fff;
+  outline: none; transition: border-color .25s, box-shadow .25s;
+}
+.pw-wrap input:focus, .form-input:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px rgba(0,255,224,.08);
+}
+.pw-toggle {
+  position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; cursor: pointer; font-size: 16px; color: var(--muted);
+  transition: color .2s;
+}
+.pw-toggle:hover { color: var(--cyan); }
+
+/* ── STRENGTH BAR ── */
+.strength-wrap { margin-top: 10px; }
+.strength-bar-track {
+  height: 4px; background: var(--border); border-radius: 2px;
+  margin-bottom: 8px; overflow: hidden;
+}
+.strength-bar-fill {
+  height: 100%; border-radius: 2px;
+  transition: width .4s ease, background .4s ease;
+  width: 0;
+}
+.strength-meta { display: flex; justify-content: space-between; align-items: center; }
+.strength-label { font-family: 'Space Mono', monospace; font-size: 10px; font-weight: 700; }
+.entropy-val { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--muted); }
+
+/* ── CHECKS ── */
+.pw-checks { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 12px; }
+.chk {
+  display: flex; align-items: center; gap: 7px;
+  font-family: 'Space Mono', monospace; font-size: 9px; color: var(--muted);
+  padding: 5px 8px; border-radius: 6px; border: 1px solid transparent;
+  transition: all .25s;
+}
+.chk.ok { color: var(--green); background: rgba(57,217,138,.05); border-color: rgba(57,217,138,.15); }
+.chk .ci { width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--muted); display: flex; align-items: center; justify-content: center; font-size: 8px; transition: all .25s; }
+.chk.ok .ci { background: var(--green); border-color: var(--green); color: #000; }
+
+/* ── PASSWORD SUGGESTIONS ── */
+.pw-suggestions {
+  background: var(--s1); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 14px; margin-top: 12px;
+}
+.pw-suggestions h4 {
+  font-family: 'Space Mono', monospace; font-size: 9px; color: var(--gold);
+  letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 10px;
+}
+.suggestion-list { display: flex; flex-direction: column; gap: 6px; }
+.suggestion-item {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--s2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 9px 12px; cursor: pointer;
+  transition: all .2s; gap: 10px;
+}
+.suggestion-item:hover { border-color: var(--cyan); background: rgba(0,255,224,.03); }
+.sg-pass {
+  font-family: 'Space Mono', monospace; font-size: 11px;
+  color: var(--cyan); letter-spacing: .5px; flex: 1; word-break: break-all;
+}
+.sg-strength {
+  font-family: 'Space Mono', monospace; font-size: 9px;
+  color: var(--green); background: rgba(57,217,138,.08);
+  border: 1px solid rgba(57,217,138,.2); padding: 2px 8px; border-radius: 4px;
+  white-space: nowrap;
+}
+.sg-copy {
+  font-size: 14px; cursor: pointer; opacity: .6; transition: opacity .2s;
+  background: none; border: none; color: var(--text);
+}
+.sg-copy:hover { opacity: 1; color: var(--cyan); }
+
+/* ── BUTTONS ── */
+.btn {
+  width: 100%; padding: 15px;
+  border: none; border-radius: var(--r2); cursor: pointer;
+  font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700;
+  letter-spacing: .5px; transition: all .3s; position: relative; overflow: hidden;
+}
+.btn::before {
+  content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.1), transparent);
+  transition: left .5s;
+}
+.btn:hover::before { left: 100%; }
+.btn-enc {
+  background: linear-gradient(135deg, var(--purple), #5b3bda);
+  color: #fff;
+  box-shadow: 0 4px 24px rgba(155,109,255,.25);
+}
+.btn-enc:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(155,109,255,.4); }
+.btn-dec {
+  background: linear-gradient(135deg, var(--cyan2), #009980);
+  color: #000;
+  box-shadow: 0 4px 24px rgba(0,255,224,.2);
+}
+.btn-dec:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,255,224,.35); }
+.btn-qr {
+  background: linear-gradient(135deg, var(--gold2), #c47a00);
+  color: #000; margin-top: 10px;
+  box-shadow: 0 4px 24px rgba(255,201,71,.2);
+}
+.btn-qr:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(255,201,71,.35); }
+.btn:disabled { opacity: .4; cursor: not-allowed; transform: none !important; }
+
+/* ── LOADER ── */
+.loader { display: none; align-items: center; justify-content: center; gap: 10px; padding: 12px 0; }
+.loader.active { display: flex; }
+.ld { width: 8px; height: 8px; border-radius: 50%; animation: bounce 1.2s ease-in-out infinite; }
+.ld:nth-child(1) { background: var(--cyan); animation-delay: 0s; }
+.ld:nth-child(2) { background: var(--purple); animation-delay: .2s; }
+.ld:nth-child(3) { background: var(--gold); animation-delay: .4s; }
+@keyframes bounce { 0%,80%,100%{transform:scale(.6);opacity:.4} 40%{transform:scale(1);opacity:1} }
+.loader span { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); }
+
+/* ── RESULT PANEL ── */
+.result-panel {
+  display: none; margin-top: 20px;
+  background: var(--s1); border-radius: var(--r2);
+  border: 1px solid var(--border); overflow: hidden;
+}
+.result-panel.active { display: block; animation: fadeIn .4s ease; }
+.result-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 18px; border-bottom: 1px solid var(--border);
+}
+.result-header .rh-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+.result-header h4 { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; color: var(--green); }
+
+.img-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px; }
+.img-box { position: relative; }
+.img-box label { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--muted); letter-spacing: 1.5px; display: block; margin-bottom: 7px; }
+.img-box img { width: 100%; border-radius: var(--r); border: 1px solid var(--border); }
+
+.crypto-stats { padding: 0 16px 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.stat-chip {
+  background: var(--s2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 12px;
+}
+.stat-chip .sc-label { font-family: 'Space Mono', monospace; font-size: 8px; color: var(--muted); letter-spacing: 1.5px; margin-bottom: 5px; }
+.stat-chip .sc-val { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--cyan); word-break: break-all; }
+
+/* ── QR SECTION ── */
+.qr-section {
+  display: none; margin-top: 16px; padding: 20px;
+  background: var(--s1); border: 1px solid rgba(255,201,71,.2);
+  border-radius: var(--r2); text-align: center;
+}
+.qr-section.active { display: block; animation: fadeIn .4s ease; }
+.qr-section h4 { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: var(--gold); margin-bottom: 6px; }
+.qr-section p { font-size: 11px; color: var(--muted); margin-bottom: 16px; line-height: 1.7; }
+.qr-section img { width: 180px; height: 180px; border-radius: 12px; border: 2px solid rgba(255,201,71,.3); }
+.qr-totp {
+  margin-top: 14px; background: var(--s2);
+  border: 1px solid var(--border); border-radius: 10px; padding: 12px;
+}
+.qr-totp p { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--muted); margin-bottom: 6px; }
+.qr-totp code { font-family: 'Space Mono', monospace; font-size: 15px; color: var(--gold); letter-spacing: 4px; }
+.totp-timer { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--muted); margin-top: 6px; }
+.totp-timer span { color: var(--red); font-weight: 700; }
+
+/* ── QR DECRYPT SECTION ── */
+.qr-decrypt-box {
+  background: var(--s1); border: 1px solid rgba(255,201,71,.15);
+  border-radius: var(--r2); padding: 20px; margin-bottom: 16px;
+}
+.qr-decrypt-box h4 {
+  font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+  color: var(--gold); margin-bottom: 6px;
+}
+.qr-decrypt-box p { font-size: 11px; color: var(--muted); margin-bottom: 14px; line-height: 1.7; }
+
+/* ── ERROR / SUCCESS ── */
+.msg {
+  padding: 12px 16px; border-radius: var(--r); margin-top: 14px;
+  font-size: 12px; display: none; font-family: 'Space Mono', monospace;
+  animation: fadeIn .3s ease;
+}
+.msg.active { display: block; }
+.msg.error { background: rgba(255,77,109,.08); border: 1px solid rgba(255,77,109,.25); color: #ff8fa3; }
+.msg.success { background: rgba(57,217,138,.08); border: 1px solid rgba(57,217,138,.25); color: var(--green); }
+
+/* ── INFO PANEL ── */
+.info-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 52px; }
+.info-card {
+  background: var(--s2); border: 1px solid var(--border);
+  border-radius: var(--r2); padding: 24px 20px;
+  position: relative; overflow: hidden; transition: border-color .3s;
+}
+.info-card:hover { border-color: var(--border2); }
+.info-card::before {
+  content: ''; position: absolute; top: -30px; right: -30px;
+  width: 100px; height: 100px; border-radius: 50%;
+  opacity: .06;
+}
+.ic1::before { background: var(--cyan); }
+.ic2::before { background: var(--purple); }
+.ic3::before { background: var(--gold); }
+.info-card .icon { font-size: 28px; margin-bottom: 14px; }
+.info-card h3 { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 8px; }
+.info-card p { font-size: 11.5px; color: var(--muted); line-height: 1.8; }
+.info-card code { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--cyan); background: rgba(0,255,224,.06); padding: 2px 6px; border-radius: 4px; }
+
+/* ── FOOTER ── */
+footer {
+  border-top: 1px solid var(--border); padding: 28px 0;
+  text-align: center;
+}
+footer p { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); line-height: 1.8; }
+footer span { color: var(--cyan); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .main-grid { grid-template-columns: 1fr; }
+  .steps { grid-template-columns: 1fr 1fr; }
+  .info-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .steps { grid-template-columns: 1fr; }
+  .img-compare { grid-template-columns: 1fr; }
+  .pw-checks { grid-template-columns: 1fr; }
+  .crypto-stats { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="bg-layer">
+  <div class="bg-grid"></div>
+  <div class="bg-orb orb1"></div>
+  <div class="bg-orb orb2"></div>
+  <div class="bg-orb orb3"></div>
+</div>
+
+<div class="wrap">
+
+<!-- HEADER -->
+<header>
+  <div class="hdr-inner">
+    <div class="logo">
+      <div class="logo-icon"><span>🔐</span></div>
+      <div class="logo-info">
+        <h1>Secure<em>Vault</em> AES</h1>
+        <p>Cryptography &amp; Network Security · BTech CSE Major Project</p>
+      </div>
+    </div>
+    <div class="hdr-badges">
+      <span class="badge bc">AES-256-CBC</span>
+      <span class="badge bg_">PBKDF2-SHA256</span>
+      <span class="badge ba">HMAC-Auth</span>
+      <span class="badge br">QR Key-Share</span>
+    </div>
+  </div>
+</header>
+
+<!-- SECURITY NOTICE -->
+<div class="security-notice">
+  <div class="sn-icon">🛡️</div>
+  <div class="sn-text">
+    <h3>Security Upgrade: Zero Password Transmission</h3>
+    <p>
+      <strong>Problem solved:</strong> Sharing passwords over WhatsApp or Email sends them as plaintext — anyone who intercepts the message can decrypt your image.
+      This system eliminates that risk using <strong>QR Code + TOTP (Time-based One-Time Password)</strong>.
+      The password <strong>never leaves the server</strong>. The receiver scans a QR code and enters a 6-digit code that expires in 30 seconds.
+    </p>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<div class="section-label">
+  <span class="sl-num">01</span>
+  <h2>How It Works</h2>
+</div>
+<div class="steps">
+  <div class="step">
+    <div class="step-num">01</div>
+    <div class="step-icon">🖼️</div>
+    <h3>Upload &amp; Encrypt</h3>
+    <p>Select your image and create a strong password. AES-256-CBC encrypts every pixel with PKCS7 padding and a random IV.</p>
+  </div>
+  <div class="step">
+    <div class="step-num">02</div>
+    <div class="step-icon">📲</div>
+    <h3>Share via QR Code</h3>
+    <p>A QR code is generated with a session token + TOTP secret. <strong>No password is ever shared.</strong> Send only the QR + encrypted image file.</p>
+  </div>
+  <div class="step">
+    <div class="step-num">03</div>
+    <div class="step-icon">🔢</div>
+    <h3>Receiver Scans &amp; Gets OTP</h3>
+    <p>Receiver scans QR → gets a 6-digit TOTP code valid for 30 seconds. Even if QR is intercepted, the code expires instantly.</p>
+  </div>
+  <div class="step">
+    <div class="step-num">04</div>
+    <div class="step-icon">✅</div>
+    <h3>HMAC Verified Decryption</h3>
+    <p>Server verifies TOTP, checks HMAC integrity, decrypts using the stored key — original image restored with proof of authenticity.</p>
+  </div>
+</div>
+
+<!-- MAIN PANELS -->
+<div class="section-label">
+  <span class="sl-num">02</span>
+  <h2>Encrypt &amp; Decrypt</h2>
+</div>
+<div class="main-grid">
+
+  <!-- ENCRYPT PANEL -->
+  <div class="panel panel-enc">
+    <div class="panel-title">🔒 Encrypt Image</div>
+    <div class="panel-sub">Upload an image and set a strong password. A QR code is generated for secure, passwordless sharing.</div>
+
+    <!-- Drop Zone -->
+    <div class="dropzone" id="dz">
+      <input type="file" id="imgFile" accept="image/*">
+      <div class="dz-icon">📁</div>
+      <div class="dz-title">Drop image here or click to browse</div>
+      <div class="dz-sub">PNG · JPG · BMP · WEBP · GIF · max 16MB</div>
+      <img class="dz-preview" id="dzPreview">
+    </div>
+
+    <!-- Password -->
+    <div class="form-group">
+      <label>Encryption Password</label>
+      <div class="pw-wrap">
+        <input type="password" id="encPw" placeholder="Create a strong password…" autocomplete="new-password">
+        <button class="pw-toggle" onclick="togglePw('encPw',this)">👁️</button>
+      </div>
+      <div class="strength-wrap" id="strengthWrap">
+        <div class="strength-bar-track"><div class="strength-bar-fill" id="sbFill"></div></div>
+        <div class="strength-meta">
+          <span class="strength-label" id="sLabel" style="color:var(--muted)">—</span>
+          <span class="entropy-val" id="sEntropy"></span>
+        </div>
+        <div class="pw-checks" id="pwChecks">
+          <div class="chk" data-key="length"><div class="ci">✓</div>12+ characters</div>
+          <div class="chk" data-key="uppercase"><div class="ci">✓</div>Uppercase letter</div>
+          <div class="chk" data-key="lowercase"><div class="ci">✓</div>Lowercase letter</div>
+          <div class="chk" data-key="digit"><div class="ci">✓</div>Number</div>
+          <div class="chk" data-key="special"><div class="ci">✓</div>Special char</div>
+          <div class="chk" data-key="no_common"><div class="ci">✓</div>Not common pw</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Suggested Passwords -->
+    <div class="pw-suggestions" id="pwSuggestions">
+      <h4>💡 Suggested Strong Passwords</h4>
+      <div class="suggestion-list" id="suggestList"></div>
+    </div>
+
+    <button class="btn btn-enc" id="encBtn" onclick="doEncrypt()">🔐 Encrypt &amp; Generate QR</button>
+
+    <div class="loader" id="encLoader">
+      <div class="ld"></div><div class="ld"></div><div class="ld"></div>
+      <span>Encrypting with AES-256-CBC…</span>
+    </div>
+    <div class="msg" id="encMsg"></div>
+
+    <!-- Result -->
+    <div class="result-panel" id="encResult">
+      <div class="result-header">
+        <div class="rh-dot"></div>
+        <h4>Encryption Successful</h4>
+      </div>
+      <div class="img-compare">
+        <div class="img-box"><label>ORIGINAL</label><img id="origImg"></div>
+        <div class="img-box"><label>ENCRYPTED (visual)</label><img id="encImg"></div>
+      </div>
+      <div class="crypto-stats" id="cryptoStats"></div>
+    </div>
+
+    <!-- QR Section -->
+    <div class="qr-section" id="qrSection">
+      <h4>📲 QR Code Ready — Google Authenticator se scan karo!</h4>
+      <p>Yeh standard QR hai — Google Authenticator, Authy, Microsoft Authenticator sab scan kar sakte hain.</p>
+      <img id="qrImg" src="" alt="QR Code" style="width:200px;height:200px;border:4px solid white;border-radius:8px;background:white;">
+      <div class="qr-totp" style="margin-top:14px;">
+        <p>SESSION TOKEN — Receiver ko yeh copy karke bhejo</p>
+        <div style="display:flex;align-items:center;gap:8px;justify-content:center;flex-wrap:wrap;">
+          <code id="tokenDisplay" style="font-family:Space Mono,monospace;font-size:11px;color:var(--gold);word-break:break-all;background:var(--s3);padding:8px 12px;border-radius:6px;border:1px solid rgba(255,201,71,.3);display:inline-block;max-width:260px;">—</code>
+          <button onclick="copyToken()" style="background:rgba(255,201,71,.15);border:1px solid rgba(255,201,71,.4);color:var(--gold);padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12px;">📋 Copy</button>
+        </div>
+      </div>
+      <div style="margin-top:12px;background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:14px;text-align:left;">
+        <p style="font-family:Space Mono,monospace;font-size:9px;color:var(--cyan);letter-spacing:1px;margin-bottom:10px;">RECEIVER KE LIYE STEPS:</p>
+        <p style="font-size:12px;color:var(--text);line-height:2.1;">
+          1️⃣ Google Authenticator app install karo<br>
+          2️⃣ App mein <strong style="color:var(--cyan)">+</strong> button tap karo<br>
+          3️⃣ <strong style="color:var(--cyan)">Scan a QR code</strong> select karo<br>
+          4️⃣ Camera se yeh QR scan karo<br>
+          5️⃣ App mein <strong style="color:var(--gold)">6-digit code</strong> dikhega<br>
+          6️⃣ Website Decrypt panel → QR/TOTP tab kholo<br>
+          7️⃣ Session Token paste karo (upar wala)<br\>
+          8️⃣ 6-digit code daalo → Decrypt!
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- DECRYPT PANEL -->
+  <div class="panel panel-dec">
+    <div class="panel-title">🔓 Decrypt Image</div>
+    <div class="panel-sub">Decrypt using your password, or use QR-based TOTP for zero-password secure decryption.</div>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('pw')">🔑 Password</button>
+      <button class="tab-btn" onclick="switchTab('qr')">📲 QR / TOTP</button>
+    </div>
+
+    <!-- Password Decrypt Tab -->
+    <div class="tab-content active" id="tab-pw">
+      <div class="form-group">
+        <label>Session Token (auto-filled after encryption)</label>
+        <input class="form-input" type="text" id="decToken" placeholder="Token from encrypt step…">
+      </div>
+      <div class="form-group">
+        <label>Decryption Password</label>
+        <div class="pw-wrap">
+          <input type="password" id="decPw" placeholder="Enter the encryption password…">
+          <button class="pw-toggle" onclick="togglePw('decPw',this)">👁️</button>
+        </div>
+      </div>
+      <button class="btn btn-dec" onclick="doDecrypt()">🔓 Decrypt Image</button>
+    </div>
+
+    <!-- QR / TOTP Decrypt Tab -->
+    <div class="tab-content" id="tab-qr">
+      <div class="qr-decrypt-box">
+        <h4>📲 QR-Based Secure Decryption</h4>
+        <p>
+          Receiver scans the QR code → gets the session token + TOTP secret →
+          opens this page → enters the 6-digit TOTP code below.
+          <strong style="color:var(--gold)">No password ever needed!</strong>
+        </p>
+        <div class="form-group">
+          <label>Session Token (from QR scan)</label>
+          <input class="form-input" type="text" id="qrToken" placeholder="Paste token from QR code…">
+        </div>
+        <div class="form-group">
+          <label>6-Digit TOTP Code (from authenticator / QR)</label>
+          <input class="form-input" type="text" id="totpCode" placeholder="000000" maxlength="6" style="letter-spacing:8px;font-size:20px;text-align:center;">
+        </div>
+        <button class="btn btn-qr" onclick="doQrDecrypt()">📲 Verify TOTP &amp; Decrypt</button>
+      </div>
+    </div>
+
+    <div class="loader" id="decLoader">
+      <div class="ld"></div><div class="ld"></div><div class="ld"></div>
+      <span>Verifying HMAC &amp; decrypting…</span>
+    </div>
+    <div class="msg" id="decMsg"></div>
+
+    <div class="result-panel" id="decResult">
+      <div class="result-header">
+        <div class="rh-dot"></div>
+        <h4>Decryption Verified</h4>
+      </div>
+      <div style="padding:16px">
+        <label style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1.5px;display:block;margin-bottom:8px;">RESTORED IMAGE</label>
+        <img id="decImg" style="width:100%;border-radius:var(--r);border:1px solid var(--border)">
+        <a id="decDownload" download style="display:block;margin-top:12px;text-align:center;font-family:'Space Mono',monospace;font-size:10px;color:var(--cyan);text-decoration:none;padding:10px;border:1px solid rgba(0,255,224,.2);border-radius:8px;transition:all .2s;" onmouseover="this.style.background='rgba(0,255,224,.05)'" onmouseout="this.style.background='transparent'">⬇ Download Decrypted Image</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- INFO CARDS -->
+<div class="section-label">
+  <span class="sl-num">03</span>
+  <h2>Security Architecture</h2>
+</div>
+<div class="info-grid">
+  <div class="info-card ic1">
+    <div class="icon">🔐</div>
+    <h3>AES-256-CBC + PBKDF2</h3>
+    <p>
+      Your password is never used directly as a key. <code>PBKDF2-HMAC-SHA256</code> with <code>200,000</code> iterations and a random 32-byte salt derives both the encryption key and HMAC key — making brute-force attacks computationally infeasible.
+    </p>
+  </div>
+  <div class="info-card ic2">
+    <div class="icon">📲</div>
+    <h3>QR + TOTP Key Exchange</h3>
+    <p>
+      The password stays on the server — always. The QR code carries only a session token and a TOTP seed. The 6-digit OTP expires every 30 seconds. Even if the QR is intercepted, it's useless after 30s.
+    </p>
+  </div>
+  <div class="info-card ic3">
+    <div class="icon">🧮</div>
+    <h3>Encrypt-then-MAC</h3>
+    <p>
+      HMAC-SHA256 is applied over the IV + ciphertext using a separate MAC key (not the encryption key). Any tampering with the encrypted file is detected and decryption is rejected before any cipher operation runs.
+    </p>
+  </div>
+</div>
+
+</div><!-- /wrap -->
+
+<footer>
+  <div class="wrap">
+    <p>SecureVault AES · BTech CSE Major Project · Cryptography &amp; Network Security</p>
+    <p>AES-256-CBC · PBKDF2-HMAC-SHA256 · Encrypt-then-MAC · TOTP Key Exchange · <span>Zero Password Transmission</span></p>
+  </div>
+</footer>
+
+<script>
+// ── STATE ──
+let currentToken = '';
+let totpSecret   = '';
+let totpInterval = null;
+
+// ── UTILS ──
+function togglePw(id, btn) {
+  const el = document.getElementById(id);
+  const show = el.type === 'password';
+  el.type = show ? 'text' : 'password';
+  btn.textContent = show ? '🙈' : '👁️';
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', (i===0&&tab==='pw')||(i===1&&tab==='qr')));
+  document.getElementById('tab-pw').classList.toggle('active', tab==='pw');
+  document.getElementById('tab-qr').classList.toggle('active', tab==='qr');
+}
+
+function showMsg(id, text, type) {
+  const el = document.getElementById(id);
+  el.textContent = text; el.className = `msg ${type} active`;
+  setTimeout(() => el.classList.remove('active'), 6000);
+}
+
+// ── IMAGE PREVIEW ──
+document.getElementById('imgFile').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const prev = document.getElementById('dzPreview');
+    prev.src = ev.target.result; prev.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+});
+
+const dz = document.getElementById('dz');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file) {
+    document.getElementById('imgFile').files = e.dataTransfer.files;
+    const r = new FileReader(); r.onload = ev => { const p = document.getElementById('dzPreview'); p.src=ev.target.result; p.style.display='block'; }; r.readAsDataURL(file);
+  }
+});
+
+// ── PASSWORD VALIDATION ──
+function genPassword(len) {
+  const lower = 'abcdefghijklmnopqrstuvwxyz';
+  const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const digits = '0123456789';
+  const special = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+  const all = lower + upper + digits + special;
+  let pw = [
+    lower[Math.floor(Math.random()*lower.length)],
+    lower[Math.floor(Math.random()*lower.length)],
+    upper[Math.floor(Math.random()*upper.length)],
+    upper[Math.floor(Math.random()*upper.length)],
+    digits[Math.floor(Math.random()*digits.length)],
+    digits[Math.floor(Math.random()*digits.length)],
+    special[Math.floor(Math.random()*special.length)],
+    special[Math.floor(Math.random()*special.length)],
+  ];
+  for (let i = pw.length; i < len; i++) pw.push(all[Math.floor(Math.random()*all.length)]);
+  return pw.sort(() => Math.random()-.5).join('');
+}
+
+function renderSuggestions() {
+  const list = document.getElementById('suggestList');
+  list.innerHTML = '';
+  [20, 24, 28].forEach(len => {
+    const pw = genPassword(len);
+    const div = document.createElement('div');
+    div.className = 'suggestion-item';
+    div.innerHTML = `
+      <span class="sg-pass">${pw}</span>
+      <span class="sg-strength">${len >= 28 ? 'Very Strong' : len >= 24 ? 'Strong' : 'Strong'}</span>
+      <button class="sg-copy" title="Use this password" onclick="useSuggestion('${pw}', event)">📋</button>
+    `;
+    div.onclick = (e) => { if (!e.target.classList.contains('sg-copy')) useSuggestion(pw, e); };
+    list.appendChild(div);
+  });
+}
+
+function useSuggestion(pw, e) {
+  e.stopPropagation();
+  document.getElementById('encPw').value = pw;
+  validatePassword(pw);
+  document.getElementById('encPw').focus();
+}
+
+renderSuggestions();
+setInterval(renderSuggestions, 30000); // refresh suggestions every 30s
+
+let pwDebounce;
+document.getElementById('encPw').addEventListener('input', e => {
+  clearTimeout(pwDebounce);
+  pwDebounce = setTimeout(() => validatePassword(e.target.value), 200);
+});
+
+async function validatePassword(pw) {
+  if (!pw) {
+    document.getElementById('sLabel').textContent = '—';
+    document.getElementById('sbFill').style.width = '0';
+    document.getElementById('sEntropy').textContent = '';
+    document.querySelectorAll('.chk').forEach(c => c.classList.remove('ok'));
+    return;
+  }
+  try {
+    const r = await fetch('/validate_password', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
+    const d = await r.json();
+
+    // Update checks
+    document.querySelectorAll('.chk').forEach(c => {
+      const key = c.dataset.key;
+      c.classList.toggle('ok', !!d.checks[key]);
+    });
+
+    // Strength bar
+    const pct = Math.round((d.score/7)*100);
+    const colors = ['#ff4d6d','#ff7a45','#ffc947','#4f8ef7','#39d98a','#39d98a','#39d98a'];
+    const col = colors[Math.min(d.score-1, colors.length-1)] || 'var(--muted)';
+    document.getElementById('sbFill').style.width = pct+'%';
+    document.getElementById('sbFill').style.background = col;
+    document.getElementById('sLabel').style.color = col;
+    document.getElementById('sLabel').textContent = d.strength;
+    document.getElementById('sEntropy').textContent = `${d.entropy} bits`;
+  } catch(e) {}
+}
+
+// ── TOTP LIVE DISPLAY ──
+function copyToken() {
+  const tok = document.getElementById('tokenDisplay').textContent;
+  navigator.clipboard.writeText(tok).then(() => {
+    showMsg('encMsg', '✅ Token copy ho gaya! Receiver ko paste karke bhejo.', 'success');
+  }).catch(() => {
+    prompt('Token copy karo (Ctrl+C):', tok);
+  });
+}
+
+// ── ENCRYPT ──
+async function doEncrypt() {
+  const file = document.getElementById('imgFile').files[0];
+  const pw   = document.getElementById('encPw').value.trim();
+
+  if (!file) { showMsg('encMsg', 'Please select an image first.', 'error'); return; }
+  if (!pw)   { showMsg('encMsg', 'Password is required.', 'error'); return; }
+
+  const fd = new FormData();
+  fd.append('image', file);
+  fd.append('password', pw);
+
+  document.getElementById('encBtn').disabled = true;
+  document.getElementById('encLoader').classList.add('active');
+  document.getElementById('encResult').classList.remove('active');
+  document.getElementById('qrSection').classList.remove('active');
+
+  try {
+    const r = await fetch('/encrypt', { method:'POST', body: fd });
+    const d = await r.json();
+
+    document.getElementById('encLoader').classList.remove('active');
+    document.getElementById('encBtn').disabled = false;
+
+    if (!d.success) { showMsg('encMsg', '❌ ' + d.error, 'error'); return; }
+
+    currentToken = d.token;
+    document.getElementById('decToken').value = d.token;
+    document.getElementById('qrToken').value  = d.token;
+
+    // Show images
+    document.getElementById('origImg').src = d.orig_url;
+    document.getElementById('encImg').src  = d.enc_url;
+    document.getElementById('encResult').classList.add('active');
+
+    // Crypto stats
+    const stats = document.getElementById('cryptoStats');
+    stats.innerHTML = [
+      {l:'ALGORITHM',  v:'AES-256-CBC'},
+      {l:'KEY (first 16)',  v:d.key_hex.slice(0,16)+'…'},
+      {l:'IV', v:d.iv_hex.slice(0,16)+'…'},
+      {l:'SALT',       v:d.salt_hex.slice(0,16)+'…'},
+      {l:'HMAC TAG',   v:d.mac_hex},
+      {l:'PBKDF2 ITER',v:d.iterations.toLocaleString()},
+      {l:'IMAGE SIZE', v:`${d.width}×${d.height}`},
+      {l:'ENTROPY',    v:d.entropy+' bits/px'},
+    ].map(s => `<div class="stat-chip"><div class="sc-label">${s.l}</div><div class="sc-val">${s.v}</div></div>`).join('');
+
+    // QR
+    document.getElementById('qrImg').src = d.qr_url;
+    document.getElementById('tokenDisplay').textContent = d.token;
+    document.getElementById('qrSection').classList.add('active');
+
+    showMsg('encMsg', '✅ Image encrypt ho gayi! QR Code ready — Google Authenticator se scan karo.', 'success');
+  } catch(e) {
+    document.getElementById('encLoader').classList.remove('active');
+    document.getElementById('encBtn').disabled = false;
+    showMsg('encMsg', '❌ Network error: ' + e.message, 'error');
+  }
+}
+
+// ── DECRYPT (password) ──
+async function doDecrypt() {
+  const token = document.getElementById('decToken').value.trim();
+  const pw    = document.getElementById('decPw').value.trim();
+
+  if (!token) { showMsg('decMsg', 'Session token required.', 'error'); return; }
+  if (!pw)    { showMsg('decMsg', 'Password required.', 'error'); return; }
+
+  const fd = new FormData();
+  fd.append('token', token); fd.append('password', pw);
+
+  document.getElementById('decLoader').classList.add('active');
+  document.getElementById('decResult').classList.remove('active');
+
+  try {
+    const r = await fetch('/decrypt', { method:'POST', body: fd });
+    const d = await r.json();
+    document.getElementById('decLoader').classList.remove('active');
+
+    if (!d.success) { showMsg('decMsg', '❌ ' + d.error, 'error'); return; }
+
+    document.getElementById('decImg').src = d.dec_url;
+    document.getElementById('decDownload').href = d.dec_url;
+    document.getElementById('decResult').classList.add('active');
+    showMsg('decMsg', '✅ ' + d.message, 'success');
+  } catch(e) {
+    document.getElementById('decLoader').classList.remove('active');
+    showMsg('decMsg', '❌ Network error: ' + e.message, 'error');
+  }
+}
+
+// ── DECRYPT (QR / TOTP) ──
+async function doQrDecrypt() {
+  const token    = document.getElementById('qrToken').value.trim();
+  const totpCode = document.getElementById('totpCode').value.trim();
+
+  if (!token)    { showMsg('decMsg', 'Session token required.', 'error'); return; }
+  if (!totpCode) { showMsg('decMsg', '6-digit TOTP code required.', 'error'); return; }
+
+  document.getElementById('decLoader').classList.add('active');
+  document.getElementById('decResult').classList.remove('active');
+
+  try {
+    const r = await fetch('/decrypt_qr', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ token, totp_code: totpCode })
+    });
+    const d = await r.json();
+    document.getElementById('decLoader').classList.remove('active');
+
+    if (!d.success) { showMsg('decMsg', '❌ ' + d.error, 'error'); return; }
+
+    document.getElementById('decImg').src = d.dec_url;
+    document.getElementById('decDownload').href = d.dec_url;
+    document.getElementById('decResult').classList.add('active');
+    showMsg('decMsg', '✅ ' + d.message + ' (TOTP verified — password never shared!)', 'success');
+  } catch(e) {
+    document.getElementById('decLoader').classList.remove('active');
+    showMsg('decMsg', '❌ Network error: ' + e.message, 'error');
+  }
+}
+</script>
+</body>
+</html>
